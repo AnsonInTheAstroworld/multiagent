@@ -141,8 +141,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
         maxi = float('-inf')
         res = None
         for action in gameState.getLegalActions(0):
+            # 计算所有后继节点的评价值
             value = self.getMin(gameState.generateSuccessor(0, action))
             if value is not None and value > maxi:
+                # 更新最大值和结果
                 maxi = value
                 res = action
         return res
@@ -151,10 +153,13 @@ class MinimaxAgent(MultiAgentSearchAgent):
         actions = gameState.getLegalActions(agentIndex)
         if depth == self.depth or len(actions) == 0:
             return self.evaluationFunction(gameState)
+
         maxi = float('-inf')
         for action in actions:
+            # 计算所有后继节点的评价值
             value = self.getMin(gameState.generateSuccessor(agentIndex, action), depth, 1)
             if value is not None and value > maxi:
+                # 更新最大值
                 maxi = value
         return maxi
 
@@ -162,13 +167,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
         actions = gameState.getLegalActions(agentIndex)
         if depth == self.depth or len(actions) == 0:
             return self.evaluationFunction(gameState)
+
         mini = float('inf')
         for action in actions:
             if agentIndex == gameState.getNumAgents() - 1:
+                #访问完最后一个鬼怪后，向下递归调用getMax
                 value = self.getMax(gameState.generateSuccessor(agentIndex, action), depth + 1, 0)
             else:
                 value = self.getMin(gameState.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
             if value is not None and value < mini:
+                # 更新最小值
                 mini = value
         return mini
 
@@ -182,58 +190,65 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        return self.getMax(gameState)[1]
-
-    def getMax(self, gameState, depth=0, agentIndex=0, alpha=float('-inf'), beta=float('inf')):
-        # 如果到达叶子节点，或者无法继续展开，则返回当前状态的评价值
-        actions = gameState.getLegalActions(agentIndex)
-        if depth == self.depth or len(actions) == 0:
-            return self.evaluationFunction(gameState), None
-        # 否则，就继续往下遍历吃豆人可能的下一步
         maxi = float('-inf')
         res = None
-        for action in actions:
-            # 考虑只有一个吃豆人的情况，直接求其MIN分支的评价值，agentIndex从1开始遍历所有鬼怪
-            value = self.getMin(gameState.generateSuccessor(agentIndex, action), depth, 1, alpha, beta)[0]
+        alpha = float('-inf')
+        beta = float('inf')
+        for action in gameState.getLegalActions(0):
+            value = self.getMin(gameState.generateSuccessor(0, action), 0, 1, alpha, beta)
             if value is not None:
                 if value > maxi:
                     maxi = value
                     res = action
-                # 按照α-β剪枝算法，如果v>β，则直接返回v
+                # 当value > beta，更新beta
                 if value > beta:
-                    return value, action
-                # 按照α-β剪枝算法，这里还需要更新α的值
+                    return value
                 if value > alpha:
+                    # 当value > alpha，更新alpha
                     alpha = value
-        return maxi, res
+        return res
 
-    def getMin(self, gameState, depth=0, agentIndex=0, alpha=float('-inf'), beta=float('inf')):
-        # 如果到达叶子节点，或者无法继续展开，则返回当前状态的评价值
+    def getMax(self, gameState, depth, agentIndex, alpha, beta):
+        actions = gameState.getLegalActions(agentIndex)
+        if depth == self.depth or len(actions) == 0:
+            return self.evaluationFunction(gameState)
+
+        maxi = float('-inf')
+        for action in actions:
+            value = self.getMin(gameState.generateSuccessor(agentIndex, action), depth, 1, alpha, beta)
+            if value is not None:
+                if value > maxi:
+                    maxi = value
+                if value > beta:
+                    # 当value > beta，剪枝
+                    return value
+                if value > alpha:
+                    # 当value > alpha，更新alpha
+                    alpha = value
+        return maxi
+
+    def getMin(self, gameState, depth, agentIndex, alpha, beta):
         legalActions = gameState.getLegalActions(agentIndex)
         if depth == self.depth or len(legalActions) == 0:
-            return self.evaluationFunction(gameState), None
-        # 否则，就继续往下遍历当前鬼怪可能的下一步
+            return self.evaluationFunction(gameState)
+
         mini = float('inf')
-        res = None
         for action in legalActions:
-            # 如果当前是最后一个鬼怪，那么下一轮就该调用MAX函数
             if agentIndex >= gameState.getNumAgents() - 1:
-                value = self.getMax(gameState.generateSuccessor(agentIndex, action), depth + 1, 0, alpha, beta)[0]
+                # 访问完最后一个鬼怪后，向下递归调用getMax
+                value = self.getMax(gameState.generateSuccessor(agentIndex, action), depth + 1, 0, alpha, beta)
             else:
-                # 如果不是最后一个鬼怪，则继续遍历下一个鬼怪，即agentIndex+1
-                value = \
-                    self.getMin(gameState.generateSuccessor(agentIndex, action), depth, agentIndex + 1, alpha, beta)[0]
+                value = self.getMin(gameState.generateSuccessor(agentIndex, action), depth, agentIndex + 1, alpha, beta)
             if value is not None:
                 if value < mini:
                     mini = value
-                    res = action
                 if value < alpha:
-                    # 按照α-β剪枝算法，如果v<α，则直接返回v
-                    if value is not None and value < alpha:
-                        return value, action
+                    # 当value<alpha，剪枝
+                    return value
                 if value < beta:
+                    # 当value<beta时，更新beta
                     beta = value
-        return mini, res
+        return mini
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -248,46 +263,46 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         All ghosts should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        return self.getMax(gameState)
-
-    def getMax(self, gameState, depth=0, agentIndex=0):
-        # 获得吃豆人所有下一步行动
-        actions = gameState.getLegalActions(agentIndex)
-        # 如果到达根节点或者没有可行的行动，则返回评价函数值
-        if depth == self.depth or len(actions) == 0:
-            return self.evaluationFunction(gameState)
-        # 否则初始化，并对合法的下一步进行遍历
         maxi = float('-inf')
-        bestAction = None
-        for action in actions:
-            # 从第一个鬼怪开始，进行Expectimax操作
-            value = self.getExpectation(gameState.generateSuccessor(agentIndex, action), depth, 1)
+        res = None
+        for action in gameState.getLegalActions(0):
+            value = self.getExpectedUtility(gameState.generateSuccessor(0, action), 0)
+            # 更新最大值和结果
             if value is not None and value > maxi:
                 maxi = value
-                bestAction = action
-        if depth is 0 and agentIndex is 0:
-            return bestAction
-        else:
-            return maxi
+                res = action
+        return res
 
-    def getExpectation(self, gameState, depth=0, agentIndex=0):
+    def getMax(self, gameState, depth, agentIndex):
         actions = gameState.getLegalActions(agentIndex)
-        # 如果到达根节点，或者没有下一步了，则返回评价函数值
         if depth == self.depth or len(actions) == 0:
             return self.evaluationFunction(gameState)
-            # 初始化效用值总计
-        exp = 0
-        actionNum = len(actions)
-        # 轮询当前鬼怪所有可行的下一步
+
+        maxi = float('-inf')
         for action in actions:
-            # 同样，如果是最后一个鬼怪，那么接下来要去算吃豆人的MAX值
+            # 求当前深度的期望效用值
+            value = self.getExpectedUtility(gameState.generateSuccessor(agentIndex, action), depth)
+            # 更新最大值
+            if value is not None and value > maxi:
+                maxi = value
+        return maxi
+
+    def getExpectedUtility(self, gameState, depth, agentIndex=1):
+        actions = gameState.getLegalActions(agentIndex)
+        if depth == self.depth or len(actions) == 0:
+            return self.evaluationFunction(gameState)
+
+        exp = 0
+        for action in actions:
             if agentIndex >= gameState.getNumAgents() - 1:
+                # 当前深度的鬼怪期望效用值求完后，向下递归调用getMax
                 exp += self.getMax(gameState.generateSuccessor(agentIndex, action), depth + 1, 0)
-            # 否则，挨个遍历各个鬼怪，计算Expectation值，并计入效用总计
             else:
-                exp += self.getExpectation(gameState.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
-        # 最后需要把所有可能的下一步的效用值求平均，并返回
-        return exp / float(actionNum)
+                # 求所有鬼怪期望效用值之和
+                exp += self.getExpectedUtility(gameState.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
+
+        # 返回平均期望效用值
+        return exp / float(len(actions))
 
 
 def betterEvaluationFunction(currentGameState: GameState):
@@ -298,16 +313,32 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     newPos = currentGameState.getPacmanPosition()
-    newFood = currentGameState.getFood().asList()
+    newFood = [food for food in currentGameState.getFood().asList() if food]
+    newGhostStates = currentGameState.getGhostStates()
+    newScaredTimes = [ghost.scaredTimer for ghost in newGhostStates]
 
-    # 以当前游戏状态为准,评价函数由距离最近的食物颗粒的距离给出，如果没有颗粒，则为0
-    eval = currentGameState.getScore()
-    foodDist = float("inf")
+    # 计算最小食物距离
+    foodDist = 60
     for food in newFood:
-        foodDist = min(foodDist, util.manhattanDistance(food, newPos))
-    eval += 1.0 / foodDist
+        foodDist = min(manhattanDistance(food, newPos), foodDist)
+    foodDist = 60 / (foodDist + 1)
 
-    return eval
+    # 计算鬼怪距离
+    ghostDist = []
+    for ghost in newGhostStates:
+        ghostDist.append(manhattanDistance(newPos, ghost.getPosition()))
+
+    # 获取最小惊吓时间
+    scaredTime = min(newScaredTimes)
+    if scaredTime == 0:
+        # 当鬼怪未被惊吓时，远离鬼怪
+        ghostDistScore = -100 / (min(ghostDist) + 1)
+    else:
+        # 当鬼怪被惊吓时，可以接近鬼怪
+        ghostDistScore = 50 / (min(ghostDist) + 1) * 0.5
+
+    # 评分由当前分数、食物数量、鬼怪惊吓时间、最小食物距离、鬼怪距离得分构成
+    return (currentGameState.getScore() * 100) - len(newFood) + (scaredTime * 80) + foodDist + ghostDistScore
 
 
 # Abbreviation
