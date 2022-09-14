@@ -202,7 +202,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     res = action
                 # 当value > beta，更新beta
                 if value > beta:
-                    return value
+                    return res
                 if value > alpha:
                     # 当value > alpha，更新alpha
                     alpha = value
@@ -318,27 +318,27 @@ def betterEvaluationFunction(currentGameState: GameState):
     newScaredTimes = [ghost.scaredTimer for ghost in newGhostStates]
 
     # 计算最小食物距离
-    foodDist = 60
+    foodDist = float('inf')
     for food in newFood:
         foodDist = min(manhattanDistance(food, newPos), foodDist)
-    foodDist = 60 / (foodDist + 1)
+    foodDistScore = 50 / (foodDist+1)
 
     # 计算鬼怪距离
-    ghostDist = []
+    ghostDist = float('inf')
     for ghost in newGhostStates:
-        ghostDist.append(manhattanDistance(newPos, ghost.getPosition()))
+        ghostDist=min(ghostDist,manhattanDistance(newPos, ghost.getPosition()))
 
     # 获取最小惊吓时间
     scaredTime = min(newScaredTimes)
     if scaredTime == 0:
         # 当鬼怪未被惊吓时，远离鬼怪
-        ghostDistScore = -100 / (min(ghostDist) + 1)
+        ghostDistScore = -100 / (ghostDist+1)
     else:
         # 当鬼怪被惊吓时，可以接近鬼怪
-        ghostDistScore = 50 / (min(ghostDist) + 1) * 0.5
+        ghostDistScore = 50 / (ghostDist+1) * 0.5 + scaredTime * 80
 
-    # 评分由当前分数、食物数量、鬼怪惊吓时间、最小食物距离、鬼怪距离得分构成
-    return (currentGameState.getScore() * 100) - len(newFood) + (scaredTime * 80) + foodDist + ghostDistScore
+    # 评分由当前分数、最小食物距离、鬼怪距离得分构成
+    return (currentGameState.getScore() * 100) + foodDistScore + ghostDistScore
 
 
 # Abbreviation
